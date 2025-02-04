@@ -4,10 +4,17 @@ import Navbar from "./component/navbar";
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [params, setParams] = useState(""); // สำหรับรับ params
+  const [params, setParams] = useState("");
   const [result, setResult] = useState("");
   const [logs, setLogs] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [userInput, setUserInput] = useState("");
+  const [response, setResponse] = useState<{
+    message: string;
+    pdfUrl?: string;
+  }>({ message: "" });
+  const [loading2, setLoading2] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,6 +52,30 @@ export default function Home() {
       setLogs((prev) => prev + `Error: ${error.message}\n`);
     }
     setLoading(false);
+  };
+
+  const handleSubmit2 = async (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    setLoading2(true);
+    setResponse({ message: "" });
+
+    try {
+      const response = await fetch("http://localhost:5000/api/receive-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: userInput }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to communicate with backend.");
+      }
+
+      const data = await response.json();
+      setResponse(data);
+    } catch (error: any) {
+      setResponse({ message: `Error: ${error.message}` });
+    }
+    setLoading2(false);
   };
 
   return (
@@ -103,6 +134,57 @@ export default function Home() {
             {result}
           </pre>
         </div>
+      </div>
+
+      {/* Input Promt */}
+      <div className="p-6 container mx-auto">
+        <h2 className="text-xl font-semibold mb-4">
+          รับค่าจากผู้ใช้และส่งไป Backend
+        </h2>
+        <form
+          onSubmit={handleSubmit2}
+          className="bg-white p-6 rounded-lg shadow-md"
+        >
+          <input
+            type="text"
+            placeholder="กรอกข้อความ..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            className="border p-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white py-2 px-4 rounded-md w-full mt-4 hover:bg-blue-700 transition disabled:opacity-50"
+            disabled={loading2}
+          >
+            {loading2 ? "กำลังส่งข้อมูล..." : "ส่งข้อมูล"}
+          </button>
+        </form>
+
+        {loading2 && <p className="mt-4 text-gray-600">กำลังส่งข้อมูล...</p>}
+
+        {response && (
+          <div className="mt-4 p-4 bg-gray-200 rounded-md">
+            <h3 className="font-semibold">ผลลัพธ์จาก Backend:</h3>
+            <p>{response.message}</p>
+
+            {response?.pdfUrl && (
+              <div className="mt-4">
+                <a
+                  href={response.pdfUrl}
+                  download="output.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition"
+                >
+                  ดาวน์โหลดไฟล์ PDF
+                </a>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
