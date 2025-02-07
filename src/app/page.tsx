@@ -9,12 +9,29 @@ export default function Home() {
   const [logs, setLogs] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [userInput, setUserInput] = useState("");
+  const [userInput, setUserInput] = useState<
+    { technique: string; status: string }[]
+  >([]);
   const [response, setResponse] = useState<{
     message: string;
     pdfUrl?: string;
   }>({ message: "" });
   const [loading2, setLoading2] = useState(false);
+
+  const handleCheckboxChange = (item: string) => {
+    setUserInput((prev) => {
+      const newUserInput = [...prev];
+      const index = newUserInput.findIndex((input) => input.technique === item);
+
+      if (index !== -1) {
+        newUserInput[index].status = "N";
+      } else {
+        newUserInput.push({ technique: item, status: "Y" });
+      }
+
+      return newUserInput;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,7 +80,7 @@ export default function Home() {
       const response = await fetch("http://localhost:5000/api/receive-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: userInput }),
+        body: JSON.stringify({ results: userInput }),
       });
 
       if (!response.ok) {
@@ -139,21 +156,44 @@ export default function Home() {
       {/* Input Promt */}
       <div className="p-6 container mx-auto">
         <h2 className="text-xl font-semibold mb-4">
-          รับค่าจากผู้ใช้และส่งไป Backend
+          เลือกประเภท SQL Injection และส่งไป Backend
         </h2>
         <form
           onSubmit={handleSubmit2}
           className="bg-white p-6 rounded-lg shadow-md"
         >
-          <input
-            type="text"
-            placeholder="กรอกข้อความ..."
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            className="border p-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-            autoFocus
-          />
+          <label className="block text-gray-700 font-medium mb-2">
+            ประเภทของ SQL Injection:
+          </label>
+
+          {[
+            "Classic SQL Injection (In-Band SQL Injection)",
+            "Blind SQL Injection",
+            "Boolean-Based Blind SQL Injection",
+            "Time-Based Blind SQL Injection",
+            "Error-Based SQL Injection",
+            "Union-Based SQL Injection",
+            "Second-Order SQL Injection",
+            "Out-of-Band SQL Injection",
+            "Stored Procedure Injection",
+          ].map((item) => (
+            <div key={item} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={item}
+                value={item}
+                checked={userInput.some(
+                  (input) => input.technique === item && input.status === "Y"
+                )} // ตรวจสอบว่า status เป็น "Y" หรือไม่
+                onChange={() => handleCheckboxChange(item)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+              />
+              <label htmlFor={item} className="text-gray-700">
+                {item}
+              </label>
+            </div>
+          ))}
+
           <button
             type="submit"
             className="bg-blue-600 text-white py-2 px-4 rounded-md w-full mt-4 hover:bg-blue-700 transition disabled:opacity-50"
