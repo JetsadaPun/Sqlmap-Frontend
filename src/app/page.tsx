@@ -168,14 +168,12 @@ export default function Home() {
 
           {[
             "Classic SQL Injection (In-Band SQL Injection)",
-            "Blind SQL Injection",
-            "Boolean-Based Blind SQL Injection",
-            "Time-Based Blind SQL Injection",
             "Error-Based SQL Injection",
             "Union-Based SQL Injection",
-            "Second-Order SQL Injection",
-            "Out-of-Band SQL Injection",
-            "Stored Procedure Injection",
+            "Boolean-Based Blind SQL Injection",
+            "Stack queries SQL Injection",
+            "Time-Based Blind SQL Injection",
+            "inline Injection",
           ].map((item) => (
             <div key={item} className="flex items-center space-x-2">
               <input
