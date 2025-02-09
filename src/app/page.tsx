@@ -8,6 +8,7 @@ export default function Home() {
   const [result, setResult] = useState("");
   const [logs, setLogs] = useState("");
   const [loading, setLoading] = useState(false);
+  const [techniques, setTechniques] = useState<string[]>([]); //technique state
 
   const [userInput, setUserInput] = useState<
     { technique: string; status: string }[]
@@ -37,6 +38,7 @@ export default function Home() {
     e.preventDefault();
     setLogs("");
     setResult("");
+    setTechniques([]); // techniques
     setLoading(true);
 
     if (!url) {
@@ -65,6 +67,7 @@ export default function Home() {
       setLogs(
         (prev) => prev + (data.log || "Received response from backend.\n")
       );
+      setTechniques(data.techniques || []); // Store detected techniques
     } catch (error: any) {
       setLogs((prev) => prev + `Error: ${error.message}\n`);
     }
@@ -76,11 +79,13 @@ export default function Home() {
     setLoading2(true);
     setResponse({ message: "" });
 
+    const requestData = { url, techniques };
+    console.log("Sending to API:", requestData);
     try {
       const response = await fetch("http://localhost:5000/api/receive-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results: userInput }),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -151,21 +156,37 @@ export default function Home() {
             {result}
           </pre>
         </div>
+        {/*Technique Detection :View */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold">
+            Detected SQL Injection Techniques:
+          </h3>
+          {techniques.length > 0 ? (
+            <ul className="list-disc list-inside bg-gray-200 p-4 rounded-md">
+              {techniques.map((technique, index) => (
+                <li key={index} className="text-green-600">
+                  {technique}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-600">No techniques detected.</p>
+          )}
+        </div>
       </div>
 
       {/* Input Promt */}
       <div className="p-6 container mx-auto">
-        <h2 className="text-xl font-semibold mb-4">
-          เลือกประเภท SQL Injection และส่งไป Backend
-        </h2>
+        <h2 className="text-xl font-semibold mb-4">Generate PDF</h2>
         <form
           onSubmit={handleSubmit2}
           className="bg-white p-6 rounded-lg shadow-md"
         >
+          {/* เอา checkbox ออก :View
           <label className="block text-gray-700 font-medium mb-2">
             ประเภทของ SQL Injection:
           </label>
-
+         
           {[
             "Classic SQL Injection (In-Band SQL Injection)",
             "Error-Based SQL Injection",
@@ -191,7 +212,7 @@ export default function Home() {
               </label>
             </div>
           ))}
-
+          */}
           <button
             type="submit"
             className="bg-blue-600 text-white py-2 px-4 rounded-md w-full mt-4 hover:bg-blue-700 transition disabled:opacity-50"
