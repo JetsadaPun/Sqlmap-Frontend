@@ -189,55 +189,108 @@
 //     </div>
 //   );
 // }
-
-
 "use client";
 import React, { useState } from "react";
 import Navbar from "./component/navbar";
-import Link from "next/link";
+
+const options = [
+  "Boolean-based Blind",
+  "Error-based",
+  "Union query-based",
+  "Stack queries",
+  "Time-based Blind",
+  "Inline queries",
+  "Select All",
+];
 
 export default function Home() {
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [url, setUrl] = useState<string>(""); //add State for URL
+  const [results, setResults] = useState<Record<string, string>>({});
+  const [returnedUrl, setReturnedUrl] = useState<string>("");
+
+  // ✅ แก้ปุ่ม "Select All"
+  const handleSelect = (name: string) => {
+    if (name === "Select All") {
+      setSelectedOptions(selectedOptions.length === options.length - 1 ? [] : options.slice(0, -1));
+    } else {
+      setSelectedOptions((prev) =>
+        prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
+      );
+    }
+  };
+
+  // ✅ edit fetch API URL + Handle Error
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/submit-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selected_tests: selectedOptions, url }), // ✅ ส่ง URL ไปด้วย
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      setReturnedUrl(data.url); //รับURLกลับจากBackend
+      setResults(data.results);
+    } catch (error) {
+      console.error("Error submitting tests:", error);
+    }
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen">
       <Navbar />
       <div className="p-6 container mx-auto text-center">
         <h1 className="text-4xl font-bold mb-8">SQL Injection Testing</h1>
-        <p className="text-gray-600 mb-12">
-          Choose a testing tool to get started:
-        </p>
+        <p className="text-gray-600 mb-6">Enter URL and select testing options below:</p>
 
-        {/* 3 Options */}
+        {/* ✅ Input URL */}
+        <input
+          type="text"
+          placeholder="Enter URL to test..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="border p-3 w-full max-w-lg rounded-md mb-4"
+        />
+
+        {/* Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Option 1: Extract Data Testing */}
-          <Link href="/extract-test">
-            <div className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-              <h2 className="text-2xl font-semibold mb-4">Extract Data Testing</h2>
-              <p className="text-gray-600">
-                Test data extraction from URLs or APIs.
-              </p>
+          {options.map((option) => (
+            <div
+              key={option}
+              onClick={() => handleSelect(option)}
+              className={`bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer ${
+                selectedOptions.includes(option) ? "border-2 border-blue-500" : ""
+              }`}
+            >
+              <h2 className="text-2xl font-semibold mb-2">{option}</h2>
             </div>
-          </Link>
-
-          {/* Option 2: Data Editing Testing */}
-          <Link href="/data-edit">
-            <div className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-              <h2 className="text-2xl font-semibold mb-4">Data Editing Testing</h2>
-              <p className="text-gray-600">
-                Test data editing and manipulation.
-              </p>
-            </div>
-          </Link>
-
-          {/* Option 3: Auth Test */}
-          <Link href="/auth">
-            <div className="bg-white p-8 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-              <h2 className="text-2xl font-semibold mb-4">Authenticator test</h2>
-              <p className="text-gray-600">
-                Test authentication and authorization flows.
-              </p>
-            </div>
-          </Link>
+          ))}
         </div>
+
+        {/* Submit Button */}
+        <button
+          onClick={handleSubmit}
+          className="mt-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+        >
+          Submit
+        </button>
+
+        {/* Results */}
+        {Object.keys(results).length > 0 && (
+          <div className="mt-6 p-6 bg-white rounded-lg shadow-md text-left">
+            <h3 className="text-xl font-bold mb-4">Results for: {returnedUrl}</h3>
+            <ul>
+              {Object.entries(results).map(([key, value]) => (
+                <li key={key} className="mb-2">
+                  <strong>{key}:</strong> {value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
