@@ -14,10 +14,13 @@ export default function Navbar() {
           <Link href="/" className="text-white no-underline">Home</Link>
         </li>
         <li>
-          <Link href="/auth" className="text-white no-underline">Authentication Test</Link>
+          <Link href="/crawl" className="text-white no-underline">Crawl Test</Link>
         </li>
         <li>
           <Link href="/manual" className="text-white no-underline">Manual Test</Link>
+        </li>
+        <li>
+          <Link href="/auth" className="text-white no-underline">Authentication Test</Link>
         </li>
       </ul>
     </nav>

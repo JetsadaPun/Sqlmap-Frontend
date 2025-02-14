@@ -72,18 +72,33 @@ export default function Home() {
     event.preventDefault();
     setLoading2(true);
     setResponse({ message: "" });
-
+  
+    // ตรวจสอบว่ามี URL และเทคนิคที่เลือก
+    if (!url.trim()) {
+      setResponse({ message: "Please enter a valid URL." });
+      setLoading2(false);
+      return;
+    }
+    if (selectedOptions.length === 0) {
+      setResponse({ message: "Please select at least one SQL Injection technique." });
+      setLoading2(false);
+      return;
+    }
+  
     try {
       const response = await fetch("http://localhost:5000/api/receive-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results: userInput }),
+        body: JSON.stringify({
+          url: url.trim(),
+          techniques: selectedOptions,  // ✅ เปลี่ยนจาก userInput เป็น selectedOptions
+        }),
       });
-
+  
       if (!response.ok) {
         throw new Error("Failed to communicate with backend.");
       }
-
+  
       const data = await response.json();
       setResponse(data);
     } catch (error: any) {
@@ -91,6 +106,7 @@ export default function Home() {
     }
     setLoading2(false);
   };
+  
 
   useEffect(() => {
     if (loading2) {
