@@ -10,38 +10,54 @@ export default function Home() {
     "Stack queries",
     "Time-based Blind",
     "Inline queries",
-    "Select All",
+    // "Select All",
   ];
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const [url, setUrl] = useState<string>(""); //add State for URL
+  const [url, setUrl] = useState<string>("");
   const [results, setResults] = useState<Record<string, string>>({});
   const [returnedUrl, setReturnedUrl] = useState<string>("");
 
   const [userInput, setUserInput] = useState<
     { technique: string; status: string }[]
   >([]);
+  
+  const techniqueMap: Record<string, string> = {
+    "Boolean-based Blind": "B",
+    "Error-based": "E",
+    "Union query-based": "U",
+    "Stack queries": "S",
+    "Time-based Blind": "T",
+    "Inline queries": "Q",
+  };
 
-  const [response, setResponse] = useState<{
+  type ResponseData = {
     message: string;
     pdfUrl?: string;
-  }>({ message: "" });
+    vulnerableParams?: { param: string; method: string }[];
+    payloads?: string[];
+    dbms?: string;
+    webTechnology?: string;
+    serverOS?: string;
+    results?: {
+      vulnerableParam: string;
+      parameterType: string;
+      payloads: string[];
+      dbms: string;
+      webTechnology: string;
+      serverOS: string;
+      technique: string;
+    }[];
+  };
+
+  // ✅ ใช้ type นี้กับ useState
+  const [response, setResponse] = useState<ResponseData>({ message: "" });
+  const [responsepdf, setResponsepdf] = useState<{
+      message: string;
+      pdfUrl?: string;
+    }>({ message: "" });
+    
   const [loading2, setLoading2] = useState(false);
-
-  // const handleCheckboxChange = (item: string) => {
-  //   setUserInput((prev) => {
-  //     const newUserInput = [...prev];
-  //     const index = newUserInput.findIndex((input) => input.technique === item);
-
-  //     if (index !== -1) {
-  //       newUserInput[index].status = "N";
-  //     } else {
-  //       newUserInput.push({ technique: item, status: "Y" });
-  //     }
-
-  //     return newUserInput;
-  //   });
-  // };
 
   const handleSelect = (name: string) => {
     setSelectedOptions((prev) =>
@@ -64,7 +80,7 @@ export default function Home() {
         newUserInput.push({ technique: name, status: "Y" });
       }
 
-      return newUserInput; // ✅ คืนค่าเป็นอาร์เรย์ของ { technique: string; status: string; } เท่านั้น
+      return newUserInput;
     });
   };
 
@@ -72,41 +88,86 @@ export default function Home() {
     event.preventDefault();
     setLoading2(true);
     setResponse({ message: "" });
-  
-    // ตรวจสอบว่ามี URL และเทคนิคที่เลือก
-    if (!url.trim()) {
-      setResponse({ message: "Please enter a valid URL." });
+    setResponsepdf({ message: "" });
+    if (!url.trim() || !url.trim().startsWith("http")) {
+      setResponse({
+        message: "กรุณากรอก URL ที่ถูกต้อง (ต้องขึ้นต้นด้วย http หรือ https)",
+      });
       setLoading2(false);
       return;
     }
+
     if (selectedOptions.length === 0) {
-      setResponse({ message: "Please select at least one SQL Injection technique." });
+      setResponse({ message: "กรุณาเลือกอย่างน้อยหนึ่งเทคนิค SQL Injection" });
       setLoading2(false);
       return;
     }
-  
+
+    const selectedCodes = selectedOptions
+      .map((option) => techniqueMap[option])
+      .filter(Boolean)
+      .join(",");
+
     try {
-      const response = await fetch("http://localhost:5000/api/receive-data", {
+      const response = await fetch("http://localhost:5000/api/technique", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: url.trim(),
-          techniques: selectedOptions,  // ✅ เปลี่ยนจาก userInput เป็น selectedOptions
+          techniques: selectedCodes,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to communicate with backend.");
       }
-  
+
       const data = await response.json();
-      setResponse(data);
+      console.log("Response Data: ", data);
+
+      if (!Array.isArray(data.results)) {
+        throw new Error("Invalid response format: results should be an array");
+      }
+      setResponse({
+        message: "การโจมตีเสร็จสมบูรณ์",
+        results: Array.isArray(results)
+          ? results.map((item: any) => ({
+              vulnerableParam: item.vulnerable_param || "N/A",
+              parameterType: item.parameter_type || "N/A",
+              payloads: item.payloads || [],
+              dbms: item.dbms || "ไม่พบข้อมูล",
+              webTechnology: item.web_technology || "ไม่พบข้อมูล",
+              serverOS: item.server_os || "ไม่พบข้อมูล",
+              technique: item.technique || "N/A",
+            }))
+          : [],
+      });
+      console.log("Response Data2: ", data);
+      
+      const pdfResponse = await fetch(
+        "http://localhost:5000/api/receive-technique",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: url.trim(),
+            response: data,
+          }),
+        }
+      );
+
+      if (!pdfResponse.ok) {
+        throw new Error("Failed to generate PDF report.");
+      }
+
+      const pdfData = await pdfResponse.json();
+      console.log("PDF Response: ", pdfData);
+      setResponsepdf(pdfData)
     } catch (error: any) {
       setResponse({ message: `Error: ${error.message}` });
     }
     setLoading2(false);
   };
-  
 
   useEffect(() => {
     if (loading2) {
@@ -213,15 +274,15 @@ export default function Home() {
           </div>
         )}
 
-        {response && (
+        {responsepdf && (
           <div className="mt-4 p-4 bg-gray-200 rounded-md">
             <h3 className="font-semibold">ผลลัพธ์จาก Backend:</h3>
-            <p>{response.message}</p>
+            <p>{responsepdf.message}</p>
 
-            {response?.pdfUrl && (
+            {responsepdf?.pdfUrl && (
               <div className="mt-4">
                 <a
-                  href={response.pdfUrl}
+                  href={responsepdf.pdfUrl}
                   download="output.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -233,51 +294,8 @@ export default function Home() {
             )}
           </div>
         )}
+        
       </div>
-      {/* Input Promt */}
-      {/* <div className="p-6 container mx-auto">
-        <form
-          onSubmit={handleSubmit2}
-          className="bg-white p-6 rounded-lg shadow-md"
-        >
-          <label className="block text-gray-700 font-medium mb-2">
-            ประเภทของ SQL Injection:
-          </label>
-          {[
-            "Boolean-based Blind",
-            "Error-based",
-            "Union query-based",
-            "Stack queries",
-            "Time-based Blind",
-            "Inline queries",
-            "Select All",
-          ].map((item) => (
-            <div key={item} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={item}
-                value={item}
-                checked={userInput.some(
-                  (input) => input.technique === item && input.status === "Y"
-                )} // ตรวจสอบว่า status เป็น "Y" หรือไม่
-                onChange={() => handleCheckboxChange(item)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor={item} className="text-gray-700">
-                {item}
-              </label>
-            </div>
-          ))}
-
-          <button
-            type="submit"
-            className="bg-blue-600 text-white py-2 px-4 rounded-md w-full mt-4 hover:bg-blue-700 transition disabled:opacity-50"
-            disabled={loading2}
-          >
-            {loading2 ? "กำลังส่งข้อมูล..." : "ส่งข้อมูล"}
-          </button>
-        </form>
-      </div> */}
     </div>
   );
 }
